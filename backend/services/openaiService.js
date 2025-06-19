@@ -2,6 +2,22 @@ const axios = require('axios');
 const { generateScoringPrompt } = require('../utils/generatePrompt');
 require('dotenv').config();
 
+/**
+ * Extrait le bloc JSON d'une réponse textuelle (avec ou sans ```json)
+ */
+function extractJsonFromText(text) {
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      throw new Error('❌ JSON mal formé : ' + e.message);
+    }
+  } else {
+    throw new Error('❌ Aucun bloc JSON trouvé dans la réponse IA.');
+  }
+}
+
 async function analyzeTextWithAI(text) {
   const prompt = generateScoringPrompt(text);
 
@@ -25,13 +41,14 @@ async function analyzeTextWithAI(text) {
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000', // à adapter si déployé
+        'HTTP-Referer': 'http://localhost:3000',
         'X-Title': 'WhiteCheckAI'
       }
     }
   );
 
-  return response.data.choices[0].message.content;
+  const fullText = response.data.choices[0].message.content;
+  return extractJsonFromText(fullText);
 }
 
 module.exports = { analyzeTextWithAI };

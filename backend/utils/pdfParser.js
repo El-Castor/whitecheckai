@@ -1,52 +1,48 @@
 const axios = require('axios');
 const pdfParse = require('pdf-parse');
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
 const cheerio = require('cheerio');
 
 /**
- * Analyse une URL vers un PDF direct ou une page contenant un lien vers un PDF
- * @param {string} url - URL directe ou HTML contenant un lien vers un PDF
- * @returns {Promise<string>} - texte extrait du PDF
+ * Télécharge et extrait le texte d’un PDF (direct ou depuis une page HTML).
+ * @param {string} url - URL directe vers un PDF ou page contenant un lien PDF
+ * @returns {Promise<string>} - Texte brut extrait du PDF
  */
 async function parsePdfFromUrl(url) {
-  let pdfUrl = url;
+  try {
+    let pdfUrl = url;
 
-  // Si ce n’est pas un lien PDF, on cherche un PDF dans la page HTML
-  if (!url.endsWith('.pdf')) {
-    const htmlRes = await axios.get(url);
-    const $ = cheerio.load(htmlRes.data);
+    // Si ce n’est pas un lien direct vers un PDF, on tente d’en trouver un dans la page HTML
+    if (!url.endsWith('.pdf')) {
+      const { data: html } = await axios.get(url);
+      const $ = cheerio.load(html);
 
-    const foundPdfLink = $('a[href$=".pdf"]').attr('href');
-    if (!foundPdfLink) {
-      throw new Error('❌ Aucun lien PDF trouvé sur la page.');
+      const foundPdf = $('a[href$=".pdf"]').attr('href');
+      if (!foundPdf) {
+        throw new Error('❌ Aucun lien PDF trouvé sur la page HTML fournie.');
+      }
+
+      pdfUrl = foundPdf.startsWith('http')
+        ? foundPdf
+        : new URL(foundPdf, url).href;
     }
 
-    pdfUrl = foundPdfLink.startsWith('http')
-      ? foundPdfLink
-      : new URL(foundPdfLink, url).href;
+    // Téléchargement du PDF
+    const tmpPath = path.join(__dirname, '../tmp/whitepaper.pdf');
+    const response = await axios.get(pdfUrl, { responseType: 'arraybuffer' });
+    await fs.writeFile(tmpPath, response.data);
+
+    // Extraction du texte
+    const buffer = await fs.readFile(tmpPath);
+    const { text } = await pdfParse(buffer);
+
+    return text;
+
+  } catch (err) {
+    console.error('❌ Erreur pendant le parsing du PDF :', err.message);
+    throw new Error(`Erreur lors du parsing du PDF : ${err.message}`);
   }
-
-  const filePath = path.join(__dirname, '../tmp/whitepaper.pdf');
-  const writer = fs.createWriteStream(filePath);
-
-  const response = await axios({
-    url: pdfUrl,
-    method: 'GET',
-    responseType: 'stream',
-  });
-
-  response.data.pipe(writer);
-
-  await new Promise((resolve, reject) => {
-    writer.on('finish', resolve);
-    writer.on('error', reject);
-  });
-
-  const dataBuffer = fs.readFileSync(filePath);
-  const pdfData = await pdfParse(dataBuffer);
-
-  return pdfData.text;
 }
 
 module.exports = { parsePdfFromUrl };

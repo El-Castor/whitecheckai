@@ -20,7 +20,7 @@ router.post('/analyze', async (req, res) => {
 
     res.status(200).json({
       message: '✅ PDF analyzed successfully',
-      analysis: JSON.parse(aiAnalysis)
+      analysis: aiAnalysis
     });
 
   } catch (err) {
