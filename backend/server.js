@@ -13,6 +13,7 @@ app.get('/', (req, res) => {
   res.send('✅ WhiteCheckAI API is running');
 });
 
+
 app.post('/analyze', async (req, res) => {
     const { url } = req.body;
   
@@ -29,8 +30,8 @@ app.post('/analyze', async (req, res) => {
         result: aiResponse,
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erreur lors du traitement du PDF ou de l’analyse IA.' });
+      console.error('❌ Erreur détaillée :', error);
+      res.status(500).json({ error: error.message || 'Erreur lors du traitement.' });
     }
   });
   

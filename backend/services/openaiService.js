@@ -1,25 +1,37 @@
-// services/openaiService.js
-
-const { OpenAI } = require('openai');
+const axios = require('axios');
+const { generateScoringPrompt } = require('../utils/generatePrompt');
 require('dotenv').config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-});
-
 async function analyzeTextWithAI(text) {
-  const prompt = `Analyse ce whitepaper crypto et donne une note de fiabilité (sur 10) et un résumé clair du projet :\n\n${text}`;
+  const prompt = generateScoringPrompt(text);
 
-  const completion = await openai.chat.completions.create({
-    model: 'mistralai/mistral-7b-instruct', // modèle gratuit sur OpenRouter
-    messages: [
-      { role: 'system', content: 'Tu es un expert en analyse de projets blockchain.' },
-      { role: 'user', content: prompt },
-    ],
-  });
+  const response = await axios.post(
+    'https://openrouter.ai/api/v1/chat/completions',
+    {
+      model: 'meta-llama/llama-3.3-8b-instruct:free',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a crypto whitepaper analyst.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.7
+    },
+    {
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost:3000', // à adapter si déployé
+        'X-Title': 'WhiteCheckAI'
+      }
+    }
+  );
 
-  return completion.choices[0].message.content;
+  return response.data.choices[0].message.content;
 }
 
 module.exports = { analyzeTextWithAI };

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { parsePdfFromUrl } = require('../utils/pdfParser');
+const { analyzeTextWithAI } = require('../services/openaiService');
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -12,15 +13,19 @@ router.post('/analyze', async (req, res) => {
 
     const extractedText = await parsePdfFromUrl(url);
 
-    // Pour le MVP : juste un aperçu du texte (on branchera OpenAI ensuite)
+    // Optionnel : tronque si trop long (OpenRouter a aussi une limite)
+    const trimmedText = extractedText.slice(0, 5000);
+
+    const aiAnalysis = await analyzeTextWithAI(trimmedText);
+
     res.status(200).json({
-      message: '✅ PDF fetched and parsed successfully',
-      textPreview: extractedText.slice(0, 1000) + '...'
+      message: '✅ PDF analyzed successfully',
+      analysis: JSON.parse(aiAnalysis)
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: '❌ Error parsing the PDF' });
+    res.status(500).json({ error: '❌ Error analyzing the PDF or generating the AI response' });
   }
 });
 
