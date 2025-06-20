@@ -1,24 +1,28 @@
 #!/bin/bash
 
 echo "🔄 Démarrage de localtunnel sur le port 5173..."
-npx localtunnel --port 5173 > lt.log &
+
+# Lance localtunnel en arrière-plan, capture la sortie
+npx localtunnel --port 5173 --no-auth > lt.log &
 LT_PID=$!
 
+# Attendre que l’URL apparaisse dans lt.log
 echo "⏳ Attente de l’URL publique..."
-
-# Attendre que lt.log contienne une URL loca.lt
-while ! grep -q "https://" lt.log; do
+until grep -m1 -o 'https://.*\.loca\.lt' lt.log > /dev/null; do
   sleep 1
 done
 
-# Extraire l’URL
-URL=$(grep -o 'https://[^ ]*.loca.lt' lt.log | head -n 1)
-
+# Récupérer l’URL
+URL=$(grep -m1 -o 'https://.*\.loca\.lt' lt.log)
 echo "✅ Tunnel actif sur : $URL"
+
+# Définir la variable d’environnement MINIAPP_URL
+export MINIAPP_URL="$URL"
+
+# Lancer le bot avec l’URL correcte
 echo "🤖 Lancement du bot Telegram..."
+node backend/bot/bot.js
 
-# Lancer le bot avec MINIAPP_URL
-MINIAPP_URL="$URL" node backend/bot/bot.js
-
-# Si le bot crash, on arrête aussi localtunnel proprement
+# Nettoyer : arrêter LocalTunnel à la fin
 kill $LT_PID
+rm lt.log

@@ -2,11 +2,10 @@
 const { Telegraf } = require('telegraf');
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
+const frontendUrl = process.env.MINIAPP_URL || 'https://whitecheck.ai/miniapp';
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-// ✅ On utilise bien `frontendUrl` partout
-const frontendUrl = process.env.MINIAPP_URL || 'https://whitecheck.ai/miniapp';
-
+// Commande /start
 bot.start((ctx) => {
   const firstName = ctx.from.first_name || 'utilisateur';
 
@@ -19,6 +18,6 @@ bot.start((ctx) => {
   });
 });
 
-// ✅ On affiche correctement l’URL utilisée
+// Lancer le bot
 bot.launch();
 console.log('🤖 Bot Telegram lancé avec Mini App URL :', frontendUrl);

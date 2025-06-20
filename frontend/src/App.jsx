@@ -1,5 +1,5 @@
-// frontend/src/App.jsx
 import React from 'react';
+import logo from './assets/logo.png';
 
 function App() {
   return (
@@ -13,7 +13,7 @@ function App() {
       backgroundColor: '#ffffff',
       color: '#000000'
     }}>
-      <img src="/logo.png" alt="WhiteCheckAI logo" width="100" style={{ marginBottom: '1rem' }} />
+      <img src={logo} alt="WhiteCheckAI logo" width="100" style={{ border: '2px solid red', marginBottom: '1rem' }} />
       <h1 style={{ fontSize: '1.5rem' }}>🚀 Bienvenue sur WhiteCheckAI</h1>
       <p>Cette Mini App est bien connectée à Telegram.</p>
     </div>

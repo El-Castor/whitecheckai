@@ -1,6 +1,10 @@
 // frontend/src/main.jsx
-import { createApp } from 'vue';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
-import router from './router';
 
-createApp(App).use(router).mount('#app');
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
