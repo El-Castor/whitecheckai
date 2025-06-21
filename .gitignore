@@ -1,5 +1,14 @@
-node_modules/
+backend/node_modules/
 .env
 .history/
 tmp/
 .DS_Store
+frontend/node_modules
+frontend/assets/logo.png
+backend/results/*
+!backend/results/.gitkeep 
+*.pdf
+backend/history/*
+!backend/history/.gitkeep
+# Dépendances
+node_modules/

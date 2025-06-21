@@ -1,6 +1,14 @@
 const axios = require('axios');
 const { generateScoringPrompt } = require('../utils/generatePrompt');
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/../.env' });
+
+const apiKey = process.env.OPENROUTER_API_KEY;
+const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-8b-instruct:free';
+
+if (!apiKey) {
+  console.error('❌ OPENROUTER_API_KEY is undefined!');
+  throw new Error('API key missing. Please check your .env and dotenv loading.');
+}
 
 /**
  * Extrait le bloc JSON d'une réponse textuelle (avec ou sans ```json)

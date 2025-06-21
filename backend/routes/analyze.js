@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { parsePdfFromUrl } = require('../utils/pdfParser');
-const { analyzeTextWithAI } = require('../services/openaiService');
 const fs = require('fs');
 const path = require('path');
+
+const { parsePdfFromUrl } = require('../utils/pdfParser');
+const { analyzeTextWithAI } = require('../services/openaiService');
+//const fetchWhitepaper = require("../services/fetchWhitepaper");
+const { generatePdf } = require('../utils/generatePdf');
+const { generateChartImage } = require('../utils/generateChartImage'); // <- important
+
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -12,13 +17,29 @@ router.post('/analyze', async (req, res) => {
     if (!url || !url.endsWith('.pdf')) {
       return res.status(400).json({ error: '❌ Provide a valid .pdf URL in body as { url }' });
     }
-
+    
+    const timestamp = new Date().toISOString();
+    const filenameBase = `analysis_${Date.now()}`;
     const extractedText = await parsePdfFromUrl(url);
     const trimmedText = extractedText.slice(0, 5000); // Limite de tokens
+    const jsonPath = path.join(__dirname, '../history', `${filenameBase}.json`);
 
-    const aiAnalysis = await analyzeTextWithAI(trimmedText);
 
     // Crée un objet d'analyse avec métadonnées
+   // Normalisation si l'objet est plat
+   const aiAnalysis = await analyzeTextWithAI(trimmedText);
+
+   // Normalisation si l'objet est plat
+   for (const key in aiAnalysis) {
+     if (typeof aiAnalysis[key] !== 'object') {
+       aiAnalysis[key] = {
+         score: aiAnalysis[key],
+         justification: "Justification non fournie."
+       };
+     }
+   }
+   
+   // ✅ Restaurer après la normalisation
     const analysisResult = {
       timestamp: new Date().toISOString(),
       sourceUrl: url,
@@ -31,14 +52,34 @@ router.post('/analyze', async (req, res) => {
       fs.mkdirSync(historyDir);
     }
 
-    // Sauvegarde le fichier
+     // 3. Sauvegarde JSON dans history/
     const fileName = `analysis_${Date.now()}.json`;
     fs.writeFileSync(path.join(historyDir, fileName), JSON.stringify(analysisResult, null, 2));
 
-    // Répond avec l’analyse
+    // 4. Génération du graphique
+    //const pdfPath = await generatePdf(aiAnalysis, `${filenameBase}.pdf`);
+    const chartImagePath = path.join(__dirname, '../tmp', `${filenameBase}_chart.png`);
+    const { chartPath } = await generateChartImage(aiAnalysis, chartImagePath); // chartPath est une COPIE pour le frontend
+    
+
+    // 5. Génération du PDF
+    const pdfPath = await generatePdf(aiAnalysis, `${filenameBase}.pdf`, {
+      sourceUrl: url,
+      timestamp,
+      chartImagePath
+    });
+
+    // 6. Nettoyage
+    if (fs.existsSync(chartImagePath)) {
+      fs.unlinkSync(chartImagePath);
+    }
+      
+    // 7. Réponse au frontend
     res.status(200).json({
       message: '✅ PDF analyzed successfully',
-      result: analysisResult.result
+      result: aiAnalysis,
+      pdf: `/export/${filenameBase}.pdf`,
+      chartImageUrl: chartPath     // ✅ URL du PDF retournée
     });
 
   } catch (err) {
@@ -68,6 +109,7 @@ router.get('/history', async (req, res) => {
     console.error('Erreur lors du chargement de l’historique :', err);
     res.status(500).json({ error: '❌ Impossible de lire l’historique.' });
   }
+
 });
 
 module.exports = router;

@@ -1,62 +1,90 @@
 import React, { useState } from 'react';
-import { analyzeWhitepaperByUrl } from '../utils/api';
+import { analyzeWhitepaper } from "../utils/api.js";
 
 export default function Home() {
   const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleAnalyze = async () => {
-    setLoading(true);
     setError('');
     setResult(null);
+    setLoading(true);
     try {
-      const data = await analyzeWhitepaperByUrl(url);
-      setResult(data);
+      const res = await analyzeWhitepaper(url);
+      setResult(res);
     } catch (err) {
-      setError(err.message);
+      setError('❌ Erreur pendant l’analyse. Vérifie l’URL PDF.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
-      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-xl">
-        <h1 className="text-2xl font-bold mb-4 text-center">🚀 WhiteCheckAI</h1>
-        <p className="text-gray-600 mb-4 text-center">Entrez l’URL d’un whitepaper PDF à analyser :</p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-200 flex flex-col items-center justify-center p-4">
+      <div className="bg-white w-full max-w-xl rounded-xl shadow-lg p-6">
+        <h1 className="text-2xl font-bold text-center mb-6">📄 Analyse de Whitepaper</h1>
 
         <input
           type="text"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-400 mb-4"
+          placeholder="https://exemple.com/whitepaper.pdf"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com/whitepaper.pdf"
-          className="w-full border border-gray-300 rounded px-4 py-2 mb-4"
         />
 
         <button
           onClick={handleAnalyze}
-          disabled={loading || !url}
-          className="w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700"
+          className={`w-full py-2 rounded-md font-medium text-white transition ${
+            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+          disabled={loading}
         >
-          {loading ? 'Analyse en cours...' : 'Analyser'}
+          {loading ? 'Analyse en cours...' : 'Lancer l’analyse'}
         </button>
 
-        {error && (
-          <div className="mt-4 text-red-600 text-sm text-center">{error}</div>
-        )}
+        {error && <p className="text-red-600 text-center mt-4">{error}</p>}
 
         {result && (
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">📊 Résultats :</h2>
-            <ul className="space-y-1 text-sm text-gray-700">
-              {Object.entries(result).map(([key, value]) => (
-                <li key={key}>
-                  <strong>{key.replace(/_/g, ' ')} :</strong> {value.score}/10 — <em>{value.justification}</em>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold mb-2">✅ Résultats :</h2>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                {Object.entries(result.result).map(([key, val]) =>
+                  typeof val === 'object' && val.score !== undefined ? (
+                    <li key={key}>
+                      <strong>{key.replace(/_/g, ' ')}:</strong> {val.score}/10 —{' '}
+                      <em>{val.justification}</em>
+                    </li>
+                  ) : null
+                )}
+              </ul>
+            </div>
+
+            {result.chartImageUrl && (
+              <div className="text-center">
+                <h3 className="font-semibold mb-2">📊 Visualisation des scores :</h3>
+                <img
+                  src={result.chartImageUrl}
+                  alt="Graphique des scores"
+                  className="w-full max-w-sm mx-auto rounded shadow"
+                />
+              </div>
+            )}
+
+            {result.pdf && (
+              <div className="text-center mt-4">
+                <a
+                  href={result.pdf}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition"
+                >
+                  📥 Télécharger le PDF complet
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>
